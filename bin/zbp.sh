@@ -87,7 +87,7 @@ check_target() {
 }
 
 deploy() {
-	local version archive
+	local version archive utils_dir_created=false
 
 	select_target || return 0
 	[[ -d "$TARGET_WORKTREE/.git" ]] || {
@@ -100,6 +100,10 @@ deploy() {
 	}
 	[[ -f "$TARGET_WORKTREE/utils/get_version.php" ]] || {
 		error "未找到版本脚本: $TARGET_WORKTREE/utils/get_version.php"
+		return 1
+	}
+	[[ -f "$TARGET_WORKTREE/utils/put_appcentre.php" ]] || {
+		error "未找到 AppCentre 脚本: $TARGET_WORKTREE/utils/put_appcentre.php"
 		return 1
 	}
 
@@ -118,6 +122,21 @@ deploy() {
 	find "$TARGET_WEB_ROOT" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} +
 	unzip -q "$archive" -d "$TARGET_WEB_ROOT"
 	cp "$TARGET_WORKTREE/.gitignore" "$TARGET_WORKTREE/.editorconfig" "$TARGET_WEB_ROOT/"
+	if [[ ! -d "$TARGET_WEB_ROOT/utils" ]]; then
+		mkdir -p "$TARGET_WEB_ROOT/utils"
+		utils_dir_created=true
+	fi
+	cp "$TARGET_WORKTREE/utils/put_appcentre.php" "$TARGET_WEB_ROOT/utils/"
+	if ! (
+		cd "$TARGET_WEB_ROOT"
+		php utils/put_appcentre.php
+	); then
+		rm -f -- "$TARGET_WEB_ROOT/utils/put_appcentre.php"
+		[[ "$utils_dir_created" == true ]] && rmdir -- "$TARGET_WEB_ROOT/utils"
+		return 1
+	fi
+	rm -f -- "$TARGET_WEB_ROOT/utils/put_appcentre.php"
+	[[ "$utils_dir_created" == true ]] && rmdir -- "$TARGET_WEB_ROOT/utils"
 
 	printf '部署完成: %s\n归档文件: %s\n' "$TARGET_WEB_ROOT" "$archive"
 }
