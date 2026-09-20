@@ -190,6 +190,42 @@ install_mysql() {
 	)
 }
 
+install_apps_from_bundle() {
+	local config_file
+	local tmp_dir
+
+	select_target || return 0
+	check_target || return 1
+
+	config_file="$TARGET_WORKTREE/utils/bundle_apps.json"
+	[[ -f "$config_file" ]] || {
+		error "未找到配置文件：$config_file"
+		return 1
+	}
+
+	printf '\n将从 %s 下载并安装应用到 %s。\n' "$config_file" "$TARGET_WEB_ROOT"
+	confirm || {
+		printf '已取消。\n'
+		return 0
+	}
+
+	require_command php
+	require_command curl
+
+	mkdir -p "$ZBP_ARCHIVE_DIR"
+	tmp_dir="$ZBP_ARCHIVE_DIR/zba_bundle_${TARGET_NAME}"
+	rm -rf -- "$tmp_dir"
+
+	php "$TARGET_WORKTREE/utils/zba_toolkit.php" bundle -v -f \
+		-c "$config_file" \
+		-o "$tmp_dir/bundle.zip"
+
+	unzip -q -o "$tmp_dir/bundle.zip" -d "$TARGET_WEB_ROOT"
+
+	printf '应用安装完成：%s\n' "$TARGET_WEB_ROOT"
+	printf '临时文件保留：%s\n' "$tmp_dir"
+}
+
 main() {
 	local choice
 
@@ -212,6 +248,7 @@ main() {
 		printf '  1) 本地打包并部署\n'
 		printf '  2) CLI 安装 SQLite\n'
 		printf '  3) CLI 安装 MySQL\n'
+		printf '  4) 从 bundle 下载并安装应用\n'
 		printf '  0) 退出\n'
 		read -r -p '选项: ' choice
 
@@ -219,8 +256,9 @@ main() {
 			1) deploy ;;
 			2) install_sqlite ;;
 			3) install_mysql ;;
+			4) install_apps_from_bundle ;;
 			0) printf '已退出。\n'; return 0 ;;
-			*) error '请输入 0 至 3。' ;;
+			*) error '请输入 0 至 4。' ;;
 		esac
 	done
 }
