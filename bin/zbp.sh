@@ -182,7 +182,7 @@ install_apps_from_bundle() {
 	select_target || return 0
 	check_target || return 1
 
-	config_file="$TARGET_WORKTREE/utils/bundle_apps.json"
+	config_file="$SCRIPT_DIR/bundle_apps.json"
 	[[ -f "$config_file" ]] || {
 		error "未找到配置文件：$config_file"
 		return 1
