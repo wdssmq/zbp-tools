@@ -90,10 +90,11 @@ deploy() {
 	local version archive
 
 	select_target || return 0
-	[[ -d "$TARGET_WORKTREE/.git" ]] || {
+	# 检查是否为有效的 Git 仓库或工作树
+	if [[ ! -e "$TARGET_WORKTREE/.git" ]] || ! (cd "$TARGET_WORKTREE" && git rev-parse --git-dir >/dev/null 2>&1); then
 		error "Git 工作树不存在或不是仓库: $TARGET_WORKTREE"
 		return 1
-	}
+	fi
 	[[ -d "$TARGET_WEB_ROOT" ]] || {
 		error "部署目录不存在: $TARGET_WEB_ROOT"
 		return 1
