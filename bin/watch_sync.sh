@@ -167,7 +167,7 @@ run_watch() {
     --ignore '.git' \
     --ignore '.history' \
     -- \
-    bash -c './sync.sh -t "$0" -p "$1" -y' "$TARGET_NAME" "$plugin_name"
+    bash -c '$0/sync.sh -t "$1" -p "$2" -y' "$SCRIPT_DIR" "$TARGET_NAME" "$plugin_name"
 }
 
 # 启动监控
