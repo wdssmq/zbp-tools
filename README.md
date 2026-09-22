@@ -69,7 +69,16 @@ cd bin
 
 ```bash
 cd bin
+
+# 交互模式
 ./sync.sh
+
+# 参数说明
+# `-t` 或 `--target`：目标站点（zbp17 或 zbp18）
+# `-p` 或 `--plugin`：要同步的插件名称
+# `-a` 或 `--all`：同步所有插件
+# `-y` 或 `--yes`：跳过确认提示
+./sync.sh -t zbp17 -p UEditor -y
 
 ```
 

@@ -5,8 +5,31 @@ set -Eeuo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 ENV_FILE="$SCRIPT_DIR/.env"
 
+# 无交互模式标志
+INTERACTIVE=true
+TARGET_NAME=""
+PLUGIN_NAME=""
+
 error() {
-	printf '错误: %s\n' "$*" >&2
+	printf '错误：%s\n' "$*" >&2
+}
+
+usage() {
+	cat <<EOF
+用法：$0 [选项]
+
+选项:
+  -t, --target <name>   目标名称 (zbp17 或 zbp18)
+  -p, --plugin <name>   插件名称
+  -a, --all             同步所有插件
+  -y, --yes             跳过确认提示
+  -h, --help            显示此帮助信息
+
+示例:
+  $0 -t zbp17 -p myplugin          同步单个插件到指定目标
+  $0 -t zbp18 -a -y                同步所有插件到 zbp18
+  $0 --target zbp17 --plugin foo   同上 (使用长参数)
+EOF
 }
 
 require_command() {
@@ -148,9 +171,81 @@ sync_plugin() {
 	printf '同步完成: %s\n' "$dest_dir"
 }
 
+parse_args() {
+	while [[ $# -gt 0 ]]; do
+		case "$1" in
+			-t|--target)
+				TARGET_NAME="$2"
+				shift 2
+				;;
+			-p|--plugin)
+				PLUGIN_NAME="$2"
+				shift 2
+				;;
+			-a|--all)
+				ALL_PLUGINS=true
+				shift
+				;;
+			-y|--yes)
+				INTERACTIVE=false
+				shift
+				;;
+			-h|--help)
+				usage
+				exit 0
+				;;
+			*)
+				error "未知参数：$1"
+				usage
+				exit 1
+				;;
+		esac
+	done
+
+	# 验证参数
+	if [[ -n "$TARGET_NAME" ]]; then
+		[[ "$TARGET_NAME" == "zbp17" || "$TARGET_NAME" == "zbp18" ]] || {
+			error "目标必须是 zbp17 或 zbp18"
+			exit 1
+		}
+	else
+		error "必须指定目标 (-t/--target)"
+		exit 1
+	fi
+
+	if [[ -z "$PLUGIN_NAME" && -z "$ALL_PLUGINS" ]]; then
+		error "必须指定插件 (-p/--plugin) 或使用 -a 同步所有"
+		exit 1
+	fi
+}
+
+run_non_interactive() {
+	local dest_dir="$TARGET_WEB_ROOT/zb_users/plugin/$PLUGIN_NAME"
+
+	[[ -d "$PLUGIN_SRC_DIR" ]] || {
+		error "插件源目录不存在：$PLUGIN_SRC_DIR"
+		return 1
+	}
+	[[ -d "$TARGET_WEB_ROOT/zb_users/plugin" ]] || {
+		error "目标插件目录不存在：$TARGET_WEB_ROOT/zb_users/plugin"
+		return 1
+	}
+
+	printf '将使用 rsync 同步插件 %s 到 %s\n' "$PLUGIN_NAME" "$dest_dir"
+
+	mkdir -p "$dest_dir"
+	rsync -av --delete \
+		--exclude='.git' \
+		--exclude='.gitignore' \
+		--exclude='.editorconfig' \
+		"$PLUGIN_SRC_DIR/" "$dest_dir/"
+
+	printf '同步完成：%s\n' "$dest_dir"
+}
+
 main() {
 	[[ -f "$ENV_FILE" ]] || {
-		error "未找到配置文件: $ENV_FILE"
+		error "未找到配置文件：$ENV_FILE"
 		exit 1
 	}
 	# shellcheck disable=SC1090
@@ -158,11 +253,57 @@ main() {
 
 	require_command rsync
 
+	parse_args "$@"
+
 	trap 'printf "\n已退出。\n"; exit 130' INT
 
-	select_target || return 0
-	select_plugin || return 0
-	sync_plugin
+	# 无交互模式
+	if [[ "$INTERACTIVE" == "false" ]]; then
+		# 设置目标
+		case "$TARGET_NAME" in
+			zbp17)
+				TARGET_WORKTREE=$ZBP17_WORKTREE
+				TARGET_WEB_ROOT=$ZBP17_WEB_ROOT
+				;;
+			zbp18)
+				TARGET_WORKTREE=$ZBP18_WORKTREE
+				TARGET_WEB_ROOT=$ZBP18_WEB_ROOT
+				;;
+		esac
+
+		# 收集插件源
+		collect_plugin_sources || exit 1
+
+		if [[ -n "$PLUGIN_NAME" ]]; then
+			# 同步指定插件
+			local found=false
+			for i in "${!PLUGIN_NAMES[@]}"; do
+				if [[ "${PLUGIN_NAMES[$i]}" == "$PLUGIN_NAME" ]]; then
+					PLUGIN_SRC_DIR="${PLUGIN_SRC_DIRS[$i]}"
+					PLUGIN_NAME="${PLUGIN_NAMES[$i]}"
+					found=true
+					break
+				fi
+			done
+			[[ "$found" == "true" ]] || {
+				error "未找到插件：$PLUGIN_NAME"
+				exit 1
+			}
+			run_non_interactive
+		elif [[ "${ALL_PLUGINS:-}" == "true" ]]; then
+			# 同步所有插件
+			for i in "${!PLUGIN_NAMES[@]}"; do
+				PLUGIN_SRC_DIR="${PLUGIN_SRC_DIRS[$i]}"
+				PLUGIN_NAME="${PLUGIN_NAMES[$i]}"
+				run_non_interactive
+			done
+		fi
+	else
+		# 交互模式
+		select_target || return 0
+		select_plugin || return 0
+		sync_plugin
+	fi
 }
 
 main "$@"
