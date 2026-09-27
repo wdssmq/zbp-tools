@@ -126,30 +126,6 @@ collect_plugin_sources() {
 	done
 }
 
-# 同步单个插件
-sync_plugin() {
-	local src_dir="$1"
-	local name="$2"
-	local dest_dir="$TARGET_WEB_ROOT/zb_users/plugin/$name"
-
-	printf '\n[%s] 同步插件：%s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$name"
-	printf '  源：%s\n' "$src_dir"
-	printf '  目标：%s\n' "$dest_dir"
-
-	mkdir -p "$dest_dir"
-	if rsync -av --delete \
-		--exclude='.git' \
-		--exclude='.gitignore' \
-		--exclude='.editorconfig' \
-		--exclude='.DS_Store' \
-		"$src_dir/" "$dest_dir/"; then
-		printf '  ✓ 同步成功\n'
-	else
-		printf '  ✗ 同步失败\n'
-		return 1
-	fi
-}
-
 # 主监控函数
 run_watch() {
 	local watch_path="$1"

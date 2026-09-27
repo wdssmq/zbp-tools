@@ -161,12 +161,21 @@ sync_plugin() {
 		return 0
 	}
 
+	run_rsync_sync "$PLUGIN_SRC_DIR" "$dest_dir" "$PLUGIN_NAME"
+}
+
+# 统一的 rsync 同步函数
+run_rsync_sync() {
+	local src_dir="$1"
+	local dest_dir="$2"
+	local plugin_name="$3"
+
 	mkdir -p "$dest_dir"
-	rsync -av --delete \
+	rsync -av \
 		--exclude='.git' \
 		--exclude='.gitignore' \
 		--exclude='.editorconfig' \
-		"$PLUGIN_SRC_DIR/" "$dest_dir/"
+		"$src_dir/" "$dest_dir/"
 
 	printf '同步完成: %s\n' "$dest_dir"
 }
@@ -233,14 +242,7 @@ run_non_interactive() {
 
 	printf '将使用 rsync 同步插件 %s 到 %s\n' "$PLUGIN_NAME" "$dest_dir"
 
-	mkdir -p "$dest_dir"
-	rsync -av --delete \
-		--exclude='.git' \
-		--exclude='.gitignore' \
-		--exclude='.editorconfig' \
-		"$PLUGIN_SRC_DIR/" "$dest_dir/"
-
-	printf '同步完成：%s\n' "$dest_dir"
+	run_rsync_sync "$PLUGIN_SRC_DIR" "$dest_dir" "$PLUGIN_NAME"
 }
 
 main() {
