@@ -106,3 +106,5 @@ cd bin
 ## 注意事项
 
 - 所有路径需根据实际环境配置
+- 依赖安装：[Chocolatey Software | watchexec 2.8.0](https://community.chocolatey.org/packages/watchexec "Chocolatey Software | watchexec 2.8.0")
+- 依赖安装：[nuket/rsync-windows: A native build of rsync for Windows, x64 and x86, with all mitigations enabled](https://github.com/nuket/rsync-windows "nuket/rsync-windows: A native build of rsync for Windows, x64 and x86, with all mitigations enabled")
