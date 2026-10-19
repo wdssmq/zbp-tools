@@ -9,6 +9,7 @@ ENV_FILE="$SCRIPT_DIR/.env"
 INTERACTIVE=true
 TARGET_NAME=""
 PLUGIN_NAME=""
+ALL_PLUGINS=false
 
 error() {
 	printf '错误：%s\n' "$*" >&2
@@ -222,7 +223,7 @@ parse_args() {
 		exit 1
 	fi
 
-	if [[ -z "$PLUGIN_NAME" && -z "$ALL_PLUGINS" ]]; then
+	if [[ -z "$PLUGIN_NAME" && "$ALL_PLUGINS" != "true" ]]; then
 		error "必须指定插件 (-p/--plugin) 或使用 -a 同步所有"
 		exit 1
 	fi
