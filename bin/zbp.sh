@@ -108,7 +108,11 @@ deploy() {
 		return 1
 	}
 
-	version=$(cd "$TARGET_WORKTREE" && php utils/get_version.php --short)
+	version=$(cd "$TARGET_WORKTREE" && php -n utils/get_version.php --short)
+	[[ "$version" =~ ^[0-9]+(\.[0-9]+)+$ ]] || {
+		error "无法获取有效版本号: $version"
+		return 1
+	}
 	archive="$ZBP_ARCHIVE_DIR/zblogphp-${version}.zip"
 
 	printf '\n将从 %s 打包版本 %s，并清空 %s。\n' "$TARGET_WORKTREE" "$version" "$TARGET_WEB_ROOT"
