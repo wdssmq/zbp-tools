@@ -246,6 +246,19 @@ run_non_interactive() {
 	run_rsync_sync "$PLUGIN_SRC_DIR" "$dest_dir" "$PLUGIN_NAME"
 }
 
+confirm_sync() {
+	local message="$1"
+	local answer
+
+	[[ "$INTERACTIVE" == "false" ]] && return 0
+
+	read -r -p "$message 输入 yes: " answer
+	[[ "$answer" == "yes" ]] || {
+		printf '已取消。\n'
+		return 1
+	}
+}
+
 main() {
 	[[ -f "$ENV_FILE" ]] || {
 		error "未找到配置文件：$ENV_FILE"
@@ -260,8 +273,8 @@ main() {
 
 	trap 'printf "\n已退出。\n"; exit 130' INT
 
-	# 无交互模式
-	if [[ "$INTERACTIVE" == "false" ]]; then
+	# 命令行指定目标和插件时直接执行；-y 仅用于跳过确认。
+	if [[ "$INTERACTIVE" == "false" || "$ALL_PLUGINS" == "true" || -n "$PLUGIN_NAME" ]]; then
 		# 设置目标
 		case "$TARGET_NAME" in
 			zbp17)
@@ -292,9 +305,10 @@ main() {
 				error "未找到插件：$PLUGIN_NAME"
 				exit 1
 			}
+			confirm_sync "将同步插件 $PLUGIN_NAME 到 $TARGET_NAME。确认继续？" || return 0
 			run_non_interactive
 		elif [[ "${ALL_PLUGINS:-}" == "true" ]]; then
-			# 同步所有插件
+			confirm_sync "将同步全部 ${#PLUGIN_NAMES[@]} 个插件到 $TARGET_NAME。确认继续？" || return 0
 			for i in "${!PLUGIN_NAMES[@]}"; do
 				PLUGIN_SRC_DIR="${PLUGIN_SRC_DIRS[$i]}"
 				PLUGIN_NAME="${PLUGIN_NAMES[$i]}"
